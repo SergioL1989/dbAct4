@@ -1,0 +1,57 @@
+# Caso de prueba 1: Verificar la Distribución Inicial de los Datos
+#Insertar documentos en la colección jugadores
+db.jugadores.insertMany([
+  { _id: 1, nombre: "Juan Pérez", equipo: "Águilas", posicion: "Delantero" },
+  { _id: 2, nombre: "Carlos López", equipo: "Leones", posicion: "Defensa" },
+  { _id: 3, nombre: "Luis Gómez", equipo: "Tigres", posicion: "Portero" },
+  { _id: 4, nombre: "Andrés Ríos", equipo: "Zorros", posicion: "Mediocampista" }
+]);
+
+#Verificar la distribución de los datos entre los shards
+sh.status();
+
+#Caso de prueba 2: Verificar el Balanceo de Chunks
+#Insertar una cantidad significativa de documentos para generar múltiples chunks.
+db.jugadores.insertMany([
+  { _id: 5, nombre: "José Martínez", equipo: "Rojos", posicion: "Defensa" },
+  { _id: 6, nombre: "Carlos Sánchez", equipo: "Búhos", posicion: "Mediocampista" },
+  { _id: 7, nombre: "Miguel Gómez", equipo: "Caballos", posicion: "Delantero" },
+]);
+
+#Verificar la distribución de los chunks entre los shards con el comando sh.status().
+sh.status();
+
+#Caso de prueba 3: Verificar el Movimiento de Chunks
+#Mover un chunk de un shard a otro usando el comando sh.moveChunk.
+sh.moveChunk("TorneoFutbol.jugadores", { "equipo": "A" }, "shard2");
+
+#Verificar que los chunks se han movido correctamente y que no hay pérdida de datos.
+sh.status();
+
+#Consultar los documentos para asegurarse de que los datos siguen siendo accesibles.
+db.jugadores.find({ equipo: "Águilas" }).pretty();
+
+#Caso de prueba 4: Verificar la Repartición Automática de Chunks
+#Insertar muchos documentos en un shard para crear una distribución desbalanceada.
+for (let i = 8; i <= 1000; i++) {
+  db.jugadores.insert({ _id: i, nombre: `Jugador ${i}`, equipo: "EquipoTest", posicion: "Defensa" });
+}
+
+#Verificar el estado del cluster con sh.status().
+sh.status();
+
+#Caso de prueba 5: Verificar la Escalabilidad del Particionamiento
+#Insertar una gran cantidad de documentos.
+for (let i = 1001; i <= 50000; i++) {
+  db.jugadores.insert({ _id: i, nombre: `Jugador ${i}`, equipo: "EquipoTest", posicion: "Delantero" });
+}
+
+#Verificar la distribución de los datos y la eficiencia del sistema con sh.status() y las consultas.
+sh.status();
+db.jugadores.find().count();  
+
+#Medir el rendimiento de las consultas antes y después de insertar los documentos para evaluar la eficiencia.
+let start = new Date();
+db.jugadores.find({ equipo: "EquipoTest" }).toArray();
+let end = new Date();
+print("Tiempo de consulta:", end - start, "ms");
